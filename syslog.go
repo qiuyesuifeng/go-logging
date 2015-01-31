@@ -48,5 +48,6 @@ func (b *SyslogBackend) Log(level Level, calldepth int, rec *Record) error {
 		return b.Writer.Debug(line)
 	default:
 	}
-	panic("unhandled log level")
+
+	return nil
 }

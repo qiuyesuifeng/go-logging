@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"time"
 
-	"github.com/op/go-logging"
+	"go-logging"
 )
 
 var log = logging.MustGetLogger("example")
@@ -12,7 +14,7 @@ var log = logging.MustGetLogger("example")
 // which is dependent on the log level. Many fields have a custom output
 // formatting too, eg. the time returns the hour down to the milli second.
 var format = logging.MustStringFormatter(
-	"%{color}%{time:15:04:05.000} %{shortfunc} ▶ %{level:.4s} %{id:03x}%{color:reset} %{message}",
+	"%{color}%{time:15:04:05.000}  %{shortfile} %{shortfunc} | %{level:.4s} %{id:03x}%{color:reset} %{message}",
 )
 
 // Password is just an example type implementing the Redactor interface. Any
@@ -23,27 +25,51 @@ func (p Password) Redacted() interface{} {
 	return logging.Redact(string(p))
 }
 
+func CheckError(err error) {
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
+		os.Exit(1)
+	}
+}
+
 func main() {
 	// For demo purposes, create two backend for os.Stderr.
-	backend1 := logging.NewLogBackend(os.Stderr, "", 0)
-	backend2 := logging.NewLogBackend(os.Stderr, "", 0)
+	backend1, err := logging.NewRotateLogBackend("example1.log", "", 0, "hour")
+	CheckError(err)
+
+	output, err := os.OpenFile("./example2.log", os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0644)
+	CheckError(err)
+	defer output.Close()
+	backend2 := logging.NewLogBackend(output, "", 0)
+	backend2.Color = true
 
 	// For messages written to backend2 we want to add some additional
 	// information to the output, including the used log level and the name of
 	// the function.
+	backend1Formatter := logging.NewBackendFormatter(backend1, format)
 	backend2Formatter := logging.NewBackendFormatter(backend2, format)
 
 	// Only errors and more severe messages should be sent to backend1
-	backend1Leveled := logging.AddModuleLevel(backend1)
-	backend1Leveled.SetLevel(logging.ERROR, "")
+	backend1Leveled := logging.AddModuleLevel(backend1Formatter)
+	backend1Leveled.SetLevel(logging.INFO, "")
 
 	// Set the backends to be used.
 	logging.SetBackend(backend1Leveled, backend2Formatter)
 
-	log.Debug("debug %s", Password("secret"))
-	log.Info("info")
-	log.Notice("notice")
-	log.Warning("warning")
-	log.Error("err")
-	log.Critical("crit")
+	/*
+		log.Debug("debug %s", Password("secret"))
+		log.Info("info")
+		log.Notice("notice")
+		log.Warning("warning")
+		log.Error("err")
+		log.Critical("crit")
+	*/
+
+	timer := time.NewTicker(time.Duration(10) * time.Second)
+	for {
+		select {
+		case <-timer.C:
+			log.Error(time.Now().String())
+		}
+	}
 }
