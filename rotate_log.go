@@ -77,9 +77,11 @@ func (b *RotateLogBackend) doCheckRotate() error {
 		suffix = genDayTime(time.Now())
 	} else if b.HourRolling {
 		suffix = genHourTime(time.Now())
+	} else {
+		return nil
 	}
 
-	// if suffix is not equal b.LogSuffix, then rotate
+	// Notice: if suffix is not equal b.LogSuffix, then rotate
 	if suffix != b.LogSuffix {
 		err := b.doRotate(suffix)
 		if err != nil {
@@ -91,7 +93,7 @@ func (b *RotateLogBackend) doCheckRotate() error {
 }
 
 func (b *RotateLogBackend) doRotate(suffix string) error {
-	// convert xxx.log to xxx.log.20150129
+	// Notice: convert xxx.log to xxx.log.yyyymmdd
 	oldFileName := b.FileName + "." + b.LogSuffix
 	err := os.Rename(b.FileName, oldFileName)
 	if err != nil {
@@ -103,9 +105,9 @@ func (b *RotateLogBackend) doRotate(suffix string) error {
 		return fmt.Errorf("[doRotate][createLogFile][Error]%s\n", err)
 	}
 
-	// Is this ok?
+	// Notice: Not check error, is this ok?
 	oldFd := b.fd
-	defer oldFd.Close()
+	oldFd.Close()
 
 	b.fd = fd
 	b.LogSuffix = suffix
@@ -122,8 +124,11 @@ func genDayTime(t time.Time) string {
 	month := now[5:7]
 	day := now[8:10]
 
-	ret := year + month + day
-	return ret
+	var ret []byte
+	ret = append(ret, []byte(year)...)
+	ret = append(ret, []byte(month)...)
+	ret = append(ret, []byte(day)...)
+	return string(ret)
 }
 
 func genHourTime(t time.Time) string {
@@ -133,6 +138,10 @@ func genHourTime(t time.Time) string {
 	day := now[8:10]
 	hour := now[11:13]
 
-	ret := year + month + day + hour
-	return ret
+	var ret []byte
+	ret = append(ret, []byte(year)...)
+	ret = append(ret, []byte(month)...)
+	ret = append(ret, []byte(day)...)
+	ret = append(ret, []byte(hour)...)
+	return string(ret)
 }
