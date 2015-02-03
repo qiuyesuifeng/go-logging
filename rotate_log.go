@@ -12,7 +12,8 @@ import (
 	"time"
 )
 
-const FORMAT_DATE_TIME string = "2006-01-02 15:04:05"
+const FORMAT_TIME_DAY string = "20060102"
+const FORMAT_TIME_HOUR string = "2006010215"
 
 // RotateLogBackend utilizes the standard log module.
 type RotateLogBackend struct {
@@ -106,42 +107,19 @@ func (b *RotateLogBackend) doRotate(suffix string) error {
 	}
 
 	// Notice: Not check error, is this ok?
-	oldFd := b.fd
-	oldFd.Close()
+	b.fd.Close()
 
 	b.fd = fd
 	b.LogSuffix = suffix
 
-	prefix := b.Logger.Prefix()
-	flag := b.Logger.Flags()
-	b.Logger = log.New(b.fd, prefix, flag)
+	b.Logger = log.New(b.fd, b.Logger.Prefix(), b.Logger.Flags())
 	return nil
 }
 
 func genDayTime(t time.Time) string {
-	now := t.Format(FORMAT_DATE_TIME)
-	year := now[0:4]
-	month := now[5:7]
-	day := now[8:10]
-
-	var ret []byte
-	ret = append(ret, []byte(year)...)
-	ret = append(ret, []byte(month)...)
-	ret = append(ret, []byte(day)...)
-	return string(ret)
+	return t.Format(FORMAT_TIME_DAY)
 }
 
 func genHourTime(t time.Time) string {
-	now := t.Format(FORMAT_DATE_TIME)
-	year := now[0:4]
-	month := now[5:7]
-	day := now[8:10]
-	hour := now[11:13]
-
-	var ret []byte
-	ret = append(ret, []byte(year)...)
-	ret = append(ret, []byte(month)...)
-	ret = append(ret, []byte(day)...)
-	ret = append(ret, []byte(hour)...)
-	return string(ret)
+	return t.Format(FORMAT_TIME_HOUR)
 }
